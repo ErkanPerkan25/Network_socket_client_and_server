@@ -18,6 +18,8 @@ using namespace std;
 
 #define MAX_WAITING 25
 
+int do_client(uint32_t port);
+
 string get();
 int add(uint16_t num);
 string clear();
@@ -28,6 +30,11 @@ int main(int argc, char *argv[]){
         return 1;
     }
 
+    // return do_client( argv[3] )
     return 0;
 }
 
+int do_client(uint32_t port){
+
+    return 0;
+}

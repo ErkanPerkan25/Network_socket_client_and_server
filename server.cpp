@@ -7,19 +7,30 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
-#include <netinet/in.h>
 #include <string>
-#include <pthread.h>
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <pthread.h>
+#include <netinet/in.h>
 
 using namespace std;
 
 #define MAX_WAITING 25
 
 uint16_t accumulator = 0;
+
+//
+int do_server(uint16_t port);
+
+// Function for the thread to do
+void* do_work(void *);
+
+struct do_work_struct{
+    uint32_t with_sock; 
+    struct sockaddr_in *from_cli;
+};
 
 string get();
 string add();
@@ -31,6 +42,76 @@ int main(int argc, char *argv[]){
         return 1;
     }
 
+    return do_server( stoi(argv[1]) );
+}
+
+int do_server(uint16_t port){
+    int listen_sock;
+
+    // local address in the socket
+    struct sockaddr_in local_addr;
+
+    // create socket, listen for connection
+    listen_sock = socket(AF_INET, SOCK_STREAM, 0);
+
+    // failed to create socket, print error message
+    if(listen_sock < 0){
+        cerr << "could not create socket" << endl;
+        return 1;
+    }
+
+    local_addr.sin_family = AF_INET; // use IPv4
+    local_addr.sin_addr.s_addr = INADDR_ANY; // use "wildcard" IP address
+    local_addr.sin_port = htons(port); // port num
+
+    // binds to the socket?
+    int rval = bind(listen_sock, (struct sockaddr *) &local_addr, sizeof(local_addr));
+
+    // If the connection fails, print error message
+    if (rval != 0) {
+        cerr << "Binding failed - possible cause include: "  << endl
+            << "    * invalid port numer (access denied or already in use?)" << endl
+            << "    * invalid local address (did you use the wildcard?)" << endl;
+        return 1;
+    }
+
+    rval = listen(listen_sock, MAX_WAITING);
+
+    if(rval!=0){
+        cerr << "listen() failed!" << endl;
+        return 1;
+    }
+
+    while (true) {
+        int acccepted_socket_client;
+        struct sockaddr_in from;
+        uint32_t from_len; 
+
+        from_len = sizeof(from);
+
+        acccepted_socket_client = accept(listen_sock, (struct sockaddr *)&from, &from_len);
+
+        struct do_work_struct *params = new do_work_struct;
+        params->with_sock = acccepted_socket_client; 
+        params->from_cli = &from; 
+
+        pthread_create(new pthread_t, NULL, do_work, (void *)params);
+    } 
+
     return 0;
+}
+
+void* do_work(void *generic_ptr){
+    struct do_work_struct *actual_ptr = (struct do_work_struct *) generic_ptr;
+
+    uint16_t with_sock; 
+    struct sockaddr_in *from_cli;
+    with_sock = actual_ptr->with_sock;
+    from_cli = actual_ptr->from_cli;
+
+    
+    cout << "Processed a connection from " << inet_ntoa(from_cli->sin_addr) << endl;
+
+    return nullptr;
 }
 
