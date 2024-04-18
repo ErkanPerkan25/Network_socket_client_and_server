@@ -1,15 +1,20 @@
 DEBUG = -g
-OPTS = $(DEBUG) -Wall -ansi -pedantic -std=c++20
+CXXFLAGS = $(DEBUG) -Wall -ansi -pedantic -std=c++20
+LDFLAGS = -c
 
-CC=g++ $(OPTS) -o
+CXX=g++ 
 
 OBJS = client.o server.o
 
+.PHONY: all clean
+
+all: client server
+
 client: client.cpp
-	$(CC) client
+	$(CXX) $(CXXFLAGS) -o client client.cpp 
 
 server: server.cpp
-	$(CC) server -lpthread 
+	$(CXX) $(CXXFLAGS) -o server server.cpp -lpthread 
 
 clean:
 	/bin/rm -rf *~ $(OBJS) server client
