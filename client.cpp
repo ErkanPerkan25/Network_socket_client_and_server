@@ -4,8 +4,8 @@
 * Date: 
 * Purpose:
 ******************************************************/
-#include <algorithm>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <netinet/in.h>
@@ -15,10 +15,6 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <unistd.h>
-
-#define GET 1
-#define CLEAR 2
-#define ADD 3
 
 using namespace std;
 
@@ -90,7 +86,6 @@ int do_client(char *server){
     
     // Send the command to the server
     string buffer; // the result to the server
-    buffer += "From client: ";
     buffer += command;
     buffer += '\n';
 
@@ -104,8 +99,6 @@ int do_client(char *server){
         cbuff += n;
     }
 
-
-  
     // Reading response from the server
     int n=0; // how many bytes did we just read?
     char recvln[81]; // actual bytes (characters) read

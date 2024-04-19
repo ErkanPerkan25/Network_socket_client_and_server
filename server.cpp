@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
+#include <sstream>
 #include <string>
 
 #include <arpa/inet.h>
@@ -15,15 +16,11 @@
 #include <pthread.h>
 #include <netinet/in.h>
 
-#define GET 1
-#define CLEAR 2
-#define ADD 3
-
 using namespace std;
 
 #define MAX_WAITING 25
 
-uint16_t accumulator = 0;
+int accumulator = 0;
 
 //
 int do_server(uint16_t port);
@@ -35,12 +32,6 @@ struct do_work_struct{
     uint32_t with_sock; 
     struct sockaddr_in *from_cli;
 };
-
-string get(uint16_t value){
-    return to_string(value) += '\n';
-}
-string add();
-string clear();
 
 int main(int argc, char *argv[]){
     if (argc!=2) {
@@ -89,20 +80,23 @@ int do_server(uint16_t port){
     }
 
     while (true) {
-        int acccepted_socket_client;
-        struct sockaddr_in from;
+        // accept incoming client
+        int acccepted_socket_client; // socket for actual connected client
+        struct sockaddr_in from; // holds client address data
         uint32_t from_len; 
 
         from_len = sizeof(from);
 
         acccepted_socket_client = accept(listen_sock, (struct sockaddr *)&from, &from_len);
 
+        // process incoming client
         struct do_work_struct *params = new do_work_struct;
         params->with_sock = acccepted_socket_client; 
         params->from_cli = &from; 
 
-        pthread_create(new pthread_t, NULL, do_work, (void *)params);
-    } 
+        pthread_create(new pthread_t, NULL, do_work, params);
+
+    }
 
     return 0;
 }
@@ -115,13 +109,6 @@ void* do_work(void *generic_ptr){
     with_sock = actual_ptr->with_sock;
     from_cli = actual_ptr->from_cli;
     
-    /*
-    string buffer; // the result we are trying to send back to client
-    buffer = "Your IP is ";
-    buffer += inet_ntoa(from_cli->sin_addr);
-    buffer += "\n";
-    */
-
     //Read what the client sent to the server
     int n=0; // how many bytes did we just read?
     char recvln[81]; // actual bytes (characters) read
@@ -130,12 +117,71 @@ void* do_work(void *generic_ptr){
         recvln[n] = '\0'; // null terminate returned "string"
         cout << recvln;
     }
-    cout << endl;
 
-    // Send from server to the client
+    string command(recvln);
+
+    stringstream word(command);
+    string temp;
+
+    while (word >> temp) {
+        if(temp == "add"){
+            command = temp;
+            word >> temp;
+            accumulator += stoi(temp);
+        }
+        if (temp == "clear") {
+            accumulator = 0; 
+        }
+        if (temp == "get") {
+            string buffer; // the result we are trying to send back to client
+            buffer += to_string(accumulator);
+            buffer += '\n';
+            // Send from server to the client
+            char *cbuff = (char *) buffer.c_str(); // network code needs array of bytes (chars)
+
+            int needed = buffer.length();
+
+            while (needed > 0) {
+                int n = write(with_sock, cbuff, needed);
+                needed -= n;
+                cbuff += n;
+            }
+        }
+        else {
+            break;
+        }
+    }
+
     /*
+    if (command == "get") {
+        string buffer; // the result we are trying to send back to client
+        buffer+= to_string(accumulator);
+        buffer += '\n';
+        // Send from server to the client
+        char *cbuff = (char *) buffer.c_str(); // network code needs array of bytes (chars)
+
+        int needed = buffer.length();
+
+        while (needed > 0) {
+            int n = write(with_sock, cbuff, needed);
+            needed -= n;
+            cbuff += n;
+        }
+    }
+    if (command == "clear") {
+        accumulator = 0;
+    }
+
+   if (command == "add") {
+        accumulator += value;
+    }
+  
+    string buffer; // the result we are trying to send back to client
+    buffer += command;
+    buffer += '\n';
+    // Send from server to the client
     char *cbuff = (char *) buffer.c_str(); // network code needs array of bytes (chars)
-    
+
     int needed = buffer.length();
 
     while (needed > 0) {
@@ -143,9 +189,13 @@ void* do_work(void *generic_ptr){
         needed -= n;
         cbuff += n;
     }
+
     */
-    
+    cout << accumulator << endl; 
     cout << "Processed a connection from " << inet_ntoa(from_cli->sin_addr) << endl;
+
+    // Closes the connection
+    close(with_sock);
 
     return nullptr;
 }
