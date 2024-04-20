@@ -1,7 +1,7 @@
 /*****************************************************
 * Author: Eric Hansson
 * File: client.cpp
-* Date: 
+* Date: 04/20/2024
 * Purpose:
 ******************************************************/
 #include <cstdint>
@@ -99,6 +99,11 @@ int do_client(char *server){
         cbuff += n;
     }
 
+    if (command == "clear") {
+        close(my_sock);
+        return  0;
+    }
+    
     // Reading response from the server
     int n=0; // how many bytes did we just read?
     char recvln[81]; // actual bytes (characters) read
@@ -106,9 +111,9 @@ int do_client(char *server){
     while( (n = read(my_sock, recvln, 80)) > 0){
         recvln[n] = '\0'; // null terminate returned "string"
         cout << recvln;
+        break;
     }
-
-    cout << endl;
+    //cout << endl;
 
     // end network connection
     close(my_sock);

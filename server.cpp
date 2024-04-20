@@ -1,7 +1,7 @@
 /*****************************************************
 * Author: Eric Hansson
 * File: server.cpp
-* Date: 
+* Date: 04/20/2024 
 * Purpose:
 ******************************************************/
 #include <cstdint>
@@ -108,7 +108,7 @@ void* do_work(void *generic_ptr){
     struct sockaddr_in *from_cli;
     with_sock = actual_ptr->with_sock;
     from_cli = actual_ptr->from_cli;
-    
+
     //Read what the client sent to the server
     int n=0; // how many bytes did we just read?
     char recvln[81]; // actual bytes (characters) read
@@ -116,81 +116,57 @@ void* do_work(void *generic_ptr){
     while( (n = read(with_sock, recvln, 80)) > 0){
         recvln[n] = '\0'; // null terminate returned "string"
         cout << recvln;
-    }
 
-    string command(recvln);
+        string command(recvln);
 
-    stringstream word(command);
-    string temp;
+        stringstream word(command);
+        string temp;
 
-    while (word >> temp) {
-        if(temp == "add"){
-            command = temp;
-            word >> temp;
-            accumulator += stoi(temp);
-        }
-        if (temp == "clear") {
-            accumulator = 0; 
-        }
-        if (temp == "get") {
-            string buffer; // the result we are trying to send back to client
-            buffer += to_string(accumulator);
-            buffer += '\n';
-            // Send from server to the client
-            char *cbuff = (char *) buffer.c_str(); // network code needs array of bytes (chars)
+        while (word >> temp) {
+            if(temp == "add"){
+                command = temp;
+                word >> temp;
+                accumulator += stoi(temp); 
 
-            int needed = buffer.length();
+                string buffer;
+                buffer += to_string(accumulator);
+                buffer += '\n';
 
-            while (needed > 0) {
-                int n = write(with_sock, cbuff, needed);
-                needed -= n;
-                cbuff += n;
+                char *cbuff = (char *) buffer.c_str();
+                int needed = buffer.length();
+
+                while (needed > 0) {
+                    int n = write(with_sock, cbuff, needed); 
+                    needed -= n;
+                    cbuff += n;
+                }
+            }
+            else if (temp == "clear") {
+                accumulator = 0; 
+            }
+            else if (temp == "get") {
+                string buffer; // the result we are trying to send back to client
+                buffer += to_string(accumulator);
+                buffer += '\n';
+                // Send from server to the client
+                char *cbuff = (char *) buffer.c_str(); // network code needs array of bytes (chars)
+                int needed = buffer.length();
+
+                while (needed > 0) {
+                    int n = write(with_sock, cbuff, needed);
+                    needed -= n;
+                    cbuff += n;
+                }
+                
+            }
+            else {
+                cout << "ERROR: Invalid Command!";
+                break;
             }
         }
-        else {
-            break;
-        }
+
     }
 
-    /*
-    if (command == "get") {
-        string buffer; // the result we are trying to send back to client
-        buffer+= to_string(accumulator);
-        buffer += '\n';
-        // Send from server to the client
-        char *cbuff = (char *) buffer.c_str(); // network code needs array of bytes (chars)
-
-        int needed = buffer.length();
-
-        while (needed > 0) {
-            int n = write(with_sock, cbuff, needed);
-            needed -= n;
-            cbuff += n;
-        }
-    }
-    if (command == "clear") {
-        accumulator = 0;
-    }
-
-   if (command == "add") {
-        accumulator += value;
-    }
-  
-    string buffer; // the result we are trying to send back to client
-    buffer += command;
-    buffer += '\n';
-    // Send from server to the client
-    char *cbuff = (char *) buffer.c_str(); // network code needs array of bytes (chars)
-
-    int needed = buffer.length();
-
-    while (needed > 0) {
-        int n = write(with_sock, cbuff, needed);
-        needed -= n;
-        cbuff += n;
-    }
-
-    */
     cout << accumulator << endl; 
     cout << "Processed a connection from " << inet_ntoa(from_cli->sin_addr) << endl;
 
