@@ -2,9 +2,10 @@
 * Author: Eric Hansson
 * File: client.cpp
 * Date: 04/20/2024
-* Purpose:
+* Purpose: Client will send command to the server and
+* will read back response from the server and print it
+* out
 ******************************************************/
-#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -20,12 +21,10 @@ using namespace std;
 
 #define MAX_WAITING 25
 
+// Function which the client will do
 int do_client(char *server_name);
 
-string get();
-int add(uint16_t num);
-string clear();
-
+// Declared variable
 string command;
 int port;
 int value;
@@ -35,8 +34,10 @@ int main(int argc, char *argv[]){
         cerr << "USAGE:"  << argv[0] << "<ip address> <port number>" << endl;
         return 1;
     }
+    // converts the port num from string to int
     port = stoi(argv[2]);
 
+    // reads the command
     getline(cin,command);
 
     return do_client( argv[1] );
@@ -90,15 +91,17 @@ int do_client(char *server){
     buffer += '\n';
 
     char *cbuff = (char *) buffer.c_str(); // network code needs array of bytes (chars)
-    
+
+    // length of the buffer
     int needed = buffer.length();
 
+    // Write what is in the buffer to the server
     while (needed > 0) {
         int n = write(my_sock, cbuff, needed);
         needed -= n;
         cbuff += n;
     }
-
+    // if command is clear, don't read anything or print, close connection
     if (command == "clear") {
         close(my_sock);
         return  0;
@@ -113,8 +116,6 @@ int do_client(char *server){
         cout << recvln;
         break;
     }
-    //cout << endl;
-
     // end network connection
     close(my_sock);
 
